@@ -451,7 +451,8 @@ function renderUniformLabel(item, typeInfo, safeW, safeH) {
 
   var mpnRowH = Math.round(innerH * 0.22);
   var mfrRowH = mfr ? Math.round(innerH * 0.14) : 0;
-  var descH = Math.round(innerH * 0.34);
+  var descH = Math.round(innerH * 0.22);
+  var fpRowH = Math.round(innerH * 0.14);
 
   var qrSize = Math.min(Math.round(innerH * 0.38), rightColW - 4);
   var qrSvg = generateQRSVG(spnRaw, qrSize);
@@ -488,7 +489,7 @@ function renderUniformLabel(item, typeInfo, safeW, safeH) {
         '<div style="width:' + leftColW + 'px;max-height:' + (descH - 1) + 'px;font-family:' + FONT + ';font-size:' + descSize + 'px;font-weight:400;color:#000;line-height:' + descLineH + ';word-wrap:break-word;overflow-wrap:break-word;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:' + Math.max(1, Math.floor((descH - 1) / (descSize * descLineH))) + ';">' + (escapeHTML(descText) || '\u2014') + '</div>' +
       '</div>' +
       '<div style="height:1px;background:#888;flex-shrink:0;"></div>' +
-      '<div style="flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;">' +
+      '<div style="flex:1;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px;box-sizing:border-box;">' +
         (fpColor && footprint ?
           '<div style="display:inline-flex;align-items:center;justify-content:center;background:#333;color:#fff;font-family:' + MONO + ';font-size:' + Math.min(8, Math.max(5, Math.round(leftColW * 0.12))) + 'px;font-weight:700;letter-spacing:0.5px;padding:1px ' + Math.round(leftColW * 0.08) + 'px;border-radius:99px;line-height:1.2;white-space:nowrap;">' + footprint + '</div>'
           : detailsText ?
@@ -529,7 +530,7 @@ function renderLabelHTML(item, pxW, pxH) {
   var DPI = 300;
   var PREVIEW_DPI = 96;
   var printScale = DPI / PREVIEW_DPI;
-  var pm = { top: 0.02, right: 0.075, bottom: 0.04, left: 0.075 };
+  var pm = { top: 0.04, right: 0.075, bottom: 0.02, left: 0.075 };
 
   var widthInches = pxW / DPI;
   var heightInches = pxH / DPI;
