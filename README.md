@@ -313,9 +313,29 @@ dymo-labelwriter-driver/
 | Complexity | 500+ API calls | 2 functions: `detect()` and `print()` |
 | Works without DYMO software | No | Yes — just needs the printer driver |
 
+## How This Was Built: AI + Webcam Feedback Loop
+
+The label layout in this repo was designed and iteratively refined by [Claude Code](https://claude.com/claude-code) (Anthropic's AI coding agent) with a physical feedback loop — a webcam pointed at the label printer's output tray.
+
+<p align="center">
+  <img src="docs/webcam-setup.jpg" alt="Webcam pointed at DYMO LabelWriter 450 for AI feedback loop" width="500" />
+</p>
+
+Here's how it worked:
+
+1. **Claude renders a label** — generates the HTML layout, runs Puppeteer to produce a 294x294 PNG
+2. **Claude prints the label** — sends the PNG to the DYMO printer via the Windows print spooler
+3. **Claude captures a photo** — uses `ffmpeg` to grab a frame from a 4K webcam (EMEET SmartCam C960) pointed at the printer output
+4. **Claude analyzes the result** — reads the webcam image to check if text is clipped, margins are off, QR codes are visible, etc.
+5. **Claude adjusts and repeats** — modifies margins, font sizes, layout proportions, then prints again
+
+This closed-loop process let Claude autonomously iterate on the label design — adjusting print margins by hundredths of an inch, fixing clipped text, repositioning footprint badges, and verifying QR codes were scannable (using `pyzbar` for QR decoding and OpenCV for image analysis). The human just had to say "the part number is getting cut off" or "move the badge down" and Claude could see the physical result of each change.
+
+The webcam setup is simple: any USB webcam clamped or placed near the printer's output slot. Claude accesses it via `ffmpeg -f dshow` on Windows. No special software needed.
+
 ## Credits
 
-Built by **[Sunburn Schematics](https://sunburnschematics.com)** for production use in our electronics lab.
+Built by **[Sunburn Schematics](https://sunburnschematics.com)** for production use in our electronics lab. Label layout designed and refined with [Claude Code](https://claude.com/claude-code).
 
 ## License
 
