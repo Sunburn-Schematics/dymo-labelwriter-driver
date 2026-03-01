@@ -1,0 +1,22 @@
+{
+  "name": "dymo-labelwriter-driver",
+  "version": "1.0.0",
+  "description": "Print labels on DYMO LabelWriter printers from Node.js without the DYMO SDK",
+  "main": "driver.js",
+  "keywords": [
+    "dymo",
+    "labelwriter",
+    "label-printer",
+    "thermal-printer",
+    "printer-driver",
+    "30333",
+    "2-up",
+    "component-labeling"
+  ],
+  "author": "Sunburn Schematics",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sunburn-Schematics/dymo-labelwriter-driver"
+  }
+}
