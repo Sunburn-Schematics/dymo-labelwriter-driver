@@ -1,18 +1,14 @@
 /**
- * Example: Print component labels on the DYMO LabelWriter 450
+ * Example: Print 2-up component labels on DYMO LabelWriter 450
  *
- * Renders 2-up labels (two components per sheet) using the exact same
- * layout as the Sunburn Schematics web app — component symbol, QR code,
- * footprint badge, specs — and prints them on the DYMO LabelWriter 450.
- *
- * The 30333 labels are 2-up format: two 0.98" x 0.49" labels per sheet.
- * This example renders each pair as a single 294x294 image at 300 DPI.
+ * Renders pairs of component labels on DYMO 30333 sheets (two 0.98" x 0.49"
+ * labels per sheet). Uses simple, clean text layout optimized for the tiny labels.
  *
  * Usage:
  *   node print-component-label.js                    # prints all sample pairs
  *   node print-component-label.js --preview          # saves images without printing
  *
- * Requires: npm install (puppeteer, qrcode)
+ * Requires: npm install (puppeteer)
  */
 
 var fs = require('fs');
@@ -75,7 +71,6 @@ async function main() {
       } else {
         console.log('  Print failed: ' + printResult.error);
       }
-      // Short pause between sheets
       if (idx < pairs.length - 1) {
         await new Promise(function (r) { setTimeout(r, 2000); });
       }
