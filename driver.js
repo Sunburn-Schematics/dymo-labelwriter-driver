@@ -185,19 +185,31 @@ function printImage(printerName, imageBuffer, options) {
       // printer names with spaces through MSYS2 bash → Node → PowerShell
       var ps1File = tmpFile.replace(/\.png$/, '.ps1');
       var ps1Content =
-        '# Set the target printer as default, print, then restore\r\n' +
         '$targetPrinter = "' + printerName.replace(/"/g, '`"') + '"\r\n' +
         '$file = "' + tmpFile.replace(/\\/g, '\\') + '"\r\n' +
         '\r\n' +
-        '# Print using .NET PrintDocument for precise printer targeting\r\n' +
         'Add-Type -AssemblyName System.Drawing\r\n' +
         '$img = [System.Drawing.Image]::FromFile($file)\r\n' +
         '$pd = New-Object System.Drawing.Printing.PrintDocument\r\n' +
         '$pd.PrinterSettings.PrinterName = $targetPrinter\r\n' +
         '$pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0,0,0,0)\r\n' +
+        '\r\n' +
+        '# Find the 30333 paper size from the printer driver, or use image dimensions\r\n' +
+        '$paperFound = $false\r\n' +
+        'foreach ($ps in $pd.PrinterSettings.PaperSizes) {\r\n' +
+        '  if ($ps.PaperName -match "30333") {\r\n' +
+        '    $pd.DefaultPageSettings.PaperSize = $ps\r\n' +
+        '    $paperFound = $true\r\n' +
+        '    break\r\n' +
+        '  }\r\n' +
+        '}\r\n' +
+        '\r\n' +
+        '# Set image DPI to 300 so .NET maps pixels 1:1 to the 300 DPI printer\r\n' +
+        '$img.SetResolution(300, 300)\r\n' +
+        '\r\n' +
         '$pd.add_PrintPage({\r\n' +
         '  param($sender, $e)\r\n' +
-        '  $e.Graphics.DrawImage($img, $e.MarginBounds)\r\n' +
+        '  $e.Graphics.DrawImage($img, 0, 0)\r\n' +
         '  $e.HasMorePages = $false\r\n' +
         '})\r\n' +
         '$pd.Print()\r\n' +

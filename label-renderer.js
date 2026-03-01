@@ -443,17 +443,17 @@ function renderUniformLabel(item, typeInfo, safeW, safeH) {
   var innerW = safeW - (padX * 2);
   var innerH = safeH - (padY * 2);
 
-  var rightColW = Math.round(innerW * 0.28);
+  var rightColW = Math.round(innerW * 0.35);
   var leftColW = innerW - rightColW - 2;
 
-  var iconSz = Math.min(18, Math.max(10, Math.round(rightColW * 0.65)));
+  var iconSz = Math.min(14, Math.max(8, Math.round(rightColW * 0.45)));
   var svg = typeInfo ? symbolToSVG(typeInfo, iconSz, '#333') : '';
 
-  var mpnRowH = Math.round(innerH * 0.20);
+  var mpnRowH = Math.round(innerH * 0.22);
   var mfrRowH = mfr ? Math.round(innerH * 0.14) : 0;
-  var descH = Math.round(innerH * 0.36);
+  var descH = Math.round(innerH * 0.34);
 
-  var qrSize = Math.min(Math.round(innerH * 0.30), rightColW - 2);
+  var qrSize = Math.min(Math.round(innerH * 0.38), rightColW - 4);
   var qrSvg = generateQRSVG(spnRaw, qrSize);
 
   var mpnSize = fitFont(mpnRaw.length, leftColW, COND_BOLD_R, 10, 4);
@@ -496,7 +496,7 @@ function renderUniformLabel(item, typeInfo, safeW, safeH) {
           : '') +
       '</div>' +
     '</div>' +
-    '<div style="width:' + rightColW + 'px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding-left:2px;padding-bottom:1px;">' +
+    '<div style="width:' + rightColW + 'px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding-left:2px;padding-bottom:3px;">' +
       '<div style="display:flex;flex-direction:column;align-items:center;gap:0;">' +
         svg +
         '<div style="font-family:' + FONT + ';font-size:' + codeSize + 'px;font-weight:700;color:#000;line-height:1;letter-spacing:0.5px;margin-top:1px;">' + code + '</div>' +
@@ -517,23 +517,32 @@ var _browser = null;
 
 /**
  * Render a single DYMO 30333 label to HTML, ready for puppeteer.
+ * Uses the same DPI scaling approach as the Sunburn website:
+ * content is laid out at 96 DPI then CSS-scaled to 300 DPI.
  */
-function renderLabelHTML(item, w, h) {
+function renderLabelHTML(item, pxW, pxH) {
   var typeCode = item.component_type || 'OTHER';
   if (typeCode === 'OPTO' || typeCode === 'FILT' || typeCode === 'SENS') typeCode = 'IC';
   if (typeCode === 'MOSFET' || typeCode === 'GAN') typeCode = 'FET';
   var typeInfo = SUNBURN_TYPES[typeCode] || SUNBURN_TYPES.OTHER;
 
-  // Margins for the tiny label
-  var marginL = 4, marginR = 4, marginT = 2, marginB = 2;
-  var safeW = w - marginL - marginR;
-  var safeH = h - marginT - marginB;
+  var DPI = 300;
+  var PREVIEW_DPI = 96;
+  var printScale = DPI / PREVIEW_DPI;
+  var pm = { top: 0.02, right: 0.075, bottom: 0.04, left: 0.075 };
+
+  var widthInches = pxW / DPI;
+  var heightInches = pxH / DPI;
+  var safeW = Math.round((widthInches - pm.left - pm.right) * PREVIEW_DPI);
+  var safeH = Math.round((heightInches - pm.top - pm.bottom) * PREVIEW_DPI);
 
   var labelHTML = renderUniformLabel(item, typeInfo, safeW, safeH);
 
-  return '<div style="width:' + w + 'px;height:' + h + 'px;position:relative;overflow:hidden;">' +
-    '<div style="position:absolute;top:' + marginT + 'px;left:' + marginL + 'px;width:' + safeW + 'px;height:' + safeH + 'px;">' +
-      labelHTML +
+  return '<div style="width:' + pxW + 'px;height:' + pxH + 'px;position:relative;overflow:hidden;">' +
+    '<div style="position:absolute;top:' + (pm.top * DPI) + 'px;left:' + (pm.left * DPI) + 'px;">' +
+      '<div style="width:' + safeW + 'px;height:' + safeH + 'px;transform:scale(' + printScale.toFixed(4) + ');transform-origin:top left;position:relative;">' +
+        labelHTML +
+      '</div>' +
     '</div>' +
   '</div>';
 }
@@ -553,11 +562,12 @@ async function render2UpLabel(item1, item2, options) {
   var label1HTML = renderLabelHTML(item1, SHEET_W, LABEL_H);
   var label2HTML = renderLabelHTML(item2, SHEET_W, LABEL_H);
 
+  // Render labels normally in landscape
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8">' +
     '<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;500;700;800&family=Roboto+Mono:wght@700&display=swap" rel="stylesheet">' +
     '<style>*{margin:0;padding:0;box-sizing:border-box;}body{width:' + SHEET_W + 'px;height:' + SHEET_H + 'px;background:' + bgColor + ';overflow:hidden;}</style>' +
     '</head><body>' +
-    '<div style="width:' + SHEET_W + 'px;height:' + LABEL_H + 'px;border-bottom:1px dashed #ccc;">' + label1HTML + '</div>' +
+    '<div style="width:' + SHEET_W + 'px;height:' + LABEL_H + 'px;">' + label1HTML + '</div>' +
     '<div style="width:' + SHEET_W + 'px;height:' + LABEL_H + 'px;">' + label2HTML + '</div>' +
     '</body></html>';
 
@@ -570,7 +580,27 @@ async function render2UpLabel(item1, item2, options) {
   await page.setContent(html, { waitUntil: 'networkidle0' });
   var buf = await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: SHEET_W, height: SHEET_H } });
   await page.close();
-  return buf;
+
+  // Rotate the final image 90° CW so text reads correctly when the label exits
+  // the printer. Since the sheet is square (294x294), dimensions are preserved.
+  var rotPage = await _browser.newPage();
+  await rotPage.setViewport({ width: SHEET_W, height: SHEET_H, deviceScaleFactor: 1 });
+  var b64 = buf.toString('base64');
+  await rotPage.setContent('<!DOCTYPE html><html><body style="margin:0;padding:0;">' +
+    '<canvas id="c" width="' + SHEET_W + '" height="' + SHEET_H + '"></canvas>' +
+    '<script>' +
+    'var c=document.getElementById("c");var ctx=c.getContext("2d");' +
+    'var img=new Image();img.onload=function(){' +
+    'ctx.translate(' + (SHEET_W/2) + ',' + (SHEET_H/2) + ');' +
+    'ctx.rotate(Math.PI/2);' +
+    'ctx.drawImage(img,-' + (SHEET_W/2) + ',-' + (SHEET_H/2) + ');' +
+    'document.title="done";};' +
+    'img.src="data:image/png;base64,' + b64 + '";' +
+    '</script></body></html>', { waitUntil: 'load' });
+  await rotPage.waitForFunction('document.title==="done"');
+  var rotBuf = await rotPage.screenshot({ type: 'png', clip: { x: 0, y: 0, width: SHEET_W, height: SHEET_H } });
+  await rotPage.close();
+  return rotBuf;
 }
 
 /**
