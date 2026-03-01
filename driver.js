@@ -181,11 +181,37 @@ function printImage(printerName, imageBuffer, options) {
         return;
       }
 
-      // Use PowerShell Start-Process with the Print verb to send to specific printer
-      var script = 'Start-Process -FilePath "' + tmpFile.replace(/\\/g, '\\\\') +
-        '" -Verb Print -ArgumentList "/d:\\"' + printerName.replace(/"/g, '\\"') + '\\"" -Wait';
+      // Write a small .ps1 script to avoid quoting issues when passing
+      // printer names with spaces through MSYS2 bash → Node → PowerShell
+      var ps1File = tmpFile.replace(/\.png$/, '.ps1');
+      var ps1Content =
+        '# Set the target printer as default, print, then restore\r\n' +
+        '$targetPrinter = "' + printerName.replace(/"/g, '`"') + '"\r\n' +
+        '$file = "' + tmpFile.replace(/\\/g, '\\') + '"\r\n' +
+        '\r\n' +
+        '# Print using .NET PrintDocument for precise printer targeting\r\n' +
+        'Add-Type -AssemblyName System.Drawing\r\n' +
+        '$img = [System.Drawing.Image]::FromFile($file)\r\n' +
+        '$pd = New-Object System.Drawing.Printing.PrintDocument\r\n' +
+        '$pd.PrinterSettings.PrinterName = $targetPrinter\r\n' +
+        '$pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0,0,0,0)\r\n' +
+        '$pd.add_PrintPage({\r\n' +
+        '  param($sender, $e)\r\n' +
+        '  $e.Graphics.DrawImage($img, $e.MarginBounds)\r\n' +
+        '  $e.HasMorePages = $false\r\n' +
+        '})\r\n' +
+        '$pd.Print()\r\n' +
+        '$img.Dispose()\r\n' +
+        '$pd.Dispose()\r\n';
 
-      execFile('powershell', ['-NoProfile', '-Command', script], { timeout: 30000 }, function (err2) {
+      try { fs.writeFileSync(ps1File, ps1Content); } catch (e) {
+        resolve({ success: false, error: 'Failed to write print script: ' + e.message });
+        return;
+      }
+
+      execFile('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps1File], { timeout: 30000 }, function (err2) {
+        // Clean up both temp files
+        try { fs.unlinkSync(ps1File); } catch (e) { /* ignore */ }
         // Always clean up temp file
         try { fs.unlinkSync(tmpFile); } catch (e) { /* ignore */ }
 
